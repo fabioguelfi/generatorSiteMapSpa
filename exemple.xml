@@ -1,0 +1,35 @@
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+	<url>
+		<loc>
+		https://www.fastshop.com.br/loja/ipad-mini-16gb-apple-branco-wi-fi-com-pelicula-transparente
+		</loc>
+		<priority>0.8</priority>
+		<changefreq>daily</changefreq>
+		<image:image>
+		<image:loc>
+		https://www.fastshop.com.br/wcsstore/FastShopCAS/imagens/_AP_Apple/AECJMD531_PEL2/AECJMD531_PEL2_PRD_447_1.jpg
+		</image:loc>
+		<image:title>
+		iPad Mini 16GB Apple Branco Wi-Fi MD531BZ/A + Película iPad Mini/Retina Transparente Yogo
+		</image:title>
+		</image:image>
+	</url>
+
+	<url>
+		<loc>
+		https://www.fastshop.com.br/loja/ipad-mini-16gb-apple-branco-wi-fi-com-pelicula-transparente
+		</loc>
+		<priority>0.8</priority>
+		<changefreq>daily</changefreq>
+		<image:image>
+		<image:loc>
+		https://www.fastshop.com.br/wcsstore/FastShopCAS/imagens/_AP_Apple/AECJMD531_PEL2/AECJMD531_PEL2_PRD_447_1.jpg
+		</image:loc>
+		<image:title>
+		iPad Mini 16GB Apple Branco Wi-Fi MD531BZ/A + Película iPad Mini/Retina Transparente Yogo
+		</image:title>
+		</image:image>
+	</url>
+
+</urlset>
