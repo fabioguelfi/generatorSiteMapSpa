@@ -1,98 +1,113 @@
 /* --- No third party module required: https is part of the Node.js API because is native --- */
 const https = require("https");
+const fs = require('fs')
+const Path = require('path')
+const path = Path.resolve(__dirname, 'sitemap.xml')
 
-// method to get all categories
+// method to get all categories Promise
 getAllCategories = () => {
-    const urlCategory = "https://www.fastshop.com.br/wcs/resources/v1/products/topCategory";
-    https.get(urlCategory, res => {
-        res.setEncoding("UTF-8");
-        let body = "";
-        res.on("data", data => {
-            body += data;
-        });
-        res.on("end", () => {
-            body = JSON.parse(body);
-            console.log(body) // need return this obj for this method
-            // for (let i = 0; i < body.departaments.length; i++) {
-            //     let uniqueId = body.departaments[i].uniqueID
-            //     console.log(uniqueId)
-            // }
-        });
-    });
+    return new Promise((resolve, reject) => {
+        const urlCategory = "https://www.fastshop.com.br/wcs/resources/v1/products/topCategory";
+        https.get(urlCategory, res => {
+            res.setEncoding("UTF-8");
+            let body = "";
+            res.on("data", data => {
+                body += data
+            });
+            res.on("end", () => {
+                return resolve(body)
+            })
+        })
+    })
 }
 
-let idCategory = '22004' // mock but need return array of idUniq from category
+//invoke here the return of promise and cascate methods
+getAllCategories()
+    .then((body) => {
+        body = JSON.parse(body)
+        body = body.departaments
+        arrayOfCategories = []
+        for (let i = 0; i < body.length; i++) {
+            arrayOfCategories.push(body[i].uniqueID)
+            setTimeout(() => {
+                callHandShake(arrayOfCategories);
+            }, 2000)
+        }
+    })
 
+// method to get all products based on list
 getAllProducts = (idCategory) => {
-    const urlCategory = `https://www.fastshop.com.br/wcs/resources/v1/products/byCategory/${idCategory}?pageNumber=0`;
-    https.get(urlCategory, res => {
-        res.setEncoding("UTF-8");
-        let body = "";
-        res.on("data", data => {
-            body += data;
-        });
-        res.on("end", () => {
-            body = JSON.parse(body);
-            for (let i = 0; i < body.products.length; i++) {
+
+    for (let i = 0; i < 3; i++) {
+        let more = ''
+        const urlCategory = `https://www.fastshop.com.br/wcs/resources/v1/products/byCategory/${idCategory}?pageNumber=${more++}`
+        https.get(urlCategory, res => {
+            res.setEncoding("UTF-8");
+            let body = "";
+            res.on("data", data => {
+                body += data;
+            });
+            res.on("end", () => {
+
+                body = JSON.parse(body)
+                var arrayXML = []
+
                 for (let i = 0; i < body.products.length; i++) {
-                    let priority = '0.8';
+
+                    let priority = '0.8'
                     let url = `https://www.fastshop.com.br/web/p/d/14788_PRD/${pipeShortDescription(body.products[i].shortDescription)}`
                     let changeFreq = 'daily'
                     let urlImage = `https://www.fastshop.com.br${body.products[i].thumbnail}`
                     let titleImage = body.products[i].shortDescription
 
-                    // exemple sitemap
-                    // need generate obj with all categories and products to write in filesystem
-                    console.log(
-                        `
-                        <url>
-                            <loc>
-                            ${url}
-                            </loc>
-                            <priority>${priority}</priority>
-                            <changefreq>${changeFreq}</changefreq>
-                            <image:image>
-                                <image:loc>
-                                ${urlImage}
-                                </image:loc>
-                                <image:title>
-                                ${titleImage}
-                                </image:title>
-                            </image:image>
-                        </url>
-                        `
-                    )
+                    objXMl = {
+                        unit: `
+                            <url>
+                                <loc>
+                                ${url}
+                                </loc>
+                                <priority>${priority}</priority>
+                                <changefreq>${changeFreq}</changefreq>
+                                <image:image>
+                                    <image:loc>
+                                    ${urlImage}
+                                    </image:loc>
+                                    <image:title>
+                                    ${titleImage}
+                                    </image:title>
+                                </image:image>
+                            </url>
+                            `
+                    }
+
+                    arrayXML.push(objXMl.unit)
+                    fs.appendFileSync(path, arrayXML, 'utf-8', (err) => {
+                        if (err) throw err;
+                    })
+
+                    const used = process.memoryUsage().heapUsed / 1024 / 1024;
+                    console.log(`Stream The script uses approximately ${used.toFixed(0)} MB`)
+
                 }
-            }
-        });
-    });
-}
+            })
+        })
+        
+    }
 
-// get id and put in method tha will find for id and generate list
-generateXmlInRam = () => {
     
+
 }
 
-// methos that create stream and write file.xml
-
-
-/* --- call methods --- */
-
-// method that return all categories
-getAllCategories()
-
-// method that return all producs
-//getAllProducts(idCategory)
-
-// generete all sitemap in ram
-//generateXmlInRam()
-
-// method that create a stream and write new file.xml 
-//generateSiteMapXml() 
+// handshake between two func
+function callHandShake(arrayOfCategories) {
+    arrayOfCategories = ["22002", "22008"]
+    for (let i = 0; i < arrayOfCategories.length; i++) {
+        getAllProducts(arrayOfCategories[i])
+    }
+}
 
 
 /* --- utils methods --- */
-
 // pipe to shortDescription
 pipeShortDescription = (str) => {
     return str.toString().toLowerCase()
@@ -106,5 +121,5 @@ pipeShortDescription = (str) => {
         .replace(/[^\w\-]+/g, '')
         .replace(/\-\-+/g, '-')
         .replace(/^-+/, '')
-        .replace(/-+$/, '');
+        .replace(/-+$/, '')
 }
