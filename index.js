@@ -37,29 +37,46 @@ getAllCategories()
 
 // method to get all products based on list
 getAllProducts = (idCategory) => {
-
-    for (let i = 0; i < 3; i++) {
-        let more = ''
-        const urlCategory = `https://www.fastshop.com.br/wcs/resources/v1/products/byCategory/${idCategory}?pageNumber=${more++}`
-        https.get(urlCategory, res => {
+    var more = null
+    arrayUrlCategories = []
+    for (let i = 0; i < 100; i++) { // make length to no crash app, need get how much pages have for category
+        more++
+        let urlCategory = `https://www.fastshop.com.br/wcs/resources/v1/products/byCategory/${idCategory}?pageNumber=${more}`
+        arrayUrlCategories.push(urlCategory)
+        //console.log(arrayUrlCategories)
+    }
+    if(arrayUrlCategories){
+        for (let i = 0; i < arrayUrlCategories.length; i++) {
+                        
+        }
+        https.get(arrayUrlCategories[0], res => {
             res.setEncoding("UTF-8");
             let body = "";
             res.on("data", data => {
                 body += data;
             });
             res.on("end", () => {
-
+    
                 body = JSON.parse(body)
                 var arrayXML = []
-
+    
                 for (let i = 0; i < body.products.length; i++) {
-
+    
                     let priority = '0.8'
                     let url = `https://www.fastshop.com.br/web/p/d/14788_PRD/${pipeShortDescription(body.products[i].shortDescription)}`
                     let changeFreq = 'daily'
                     let urlImage = `https://www.fastshop.com.br${body.products[i].thumbnail}`
                     let titleImage = body.products[i].shortDescription
-
+    
+                    if (priority, url, changeFreq, urlImage, titleImage == 'undefined') {
+                        url = 'https://www.fastshop.com.br/web/p/d/14788_PRD/'
+                        let priority = '0.8'
+                        let url = 'https://www.fastshop.com.br'
+                        let changeFreq = 'daily'
+                        let urlImage = `https://www.fastshop.com.br`
+                        let titleImage = ''
+                    }
+    
                     objXMl = {
                         unit: `
                             <url>
@@ -79,33 +96,32 @@ getAllProducts = (idCategory) => {
                             </url>
                             `
                     }
-
+    
                     arrayXML.push(objXMl.unit)
                     fs.appendFileSync(path, arrayXML, 'utf-8', (err) => {
                         if (err) throw err;
                     })
-
+    
                     const used = process.memoryUsage().heapUsed / 1024 / 1024;
                     console.log(`Stream The script uses approximately ${used.toFixed(0)} MB`)
-
+    
                 }
             })
         })
-        
     }
+   
 
-    
+   
 
 }
 
 // handshake between two func
 function callHandShake(arrayOfCategories) {
-    arrayOfCategories = ["22002", "22008"]
+    arrayOfCategories = ["22002", "22002"] // make dinamic here
     for (let i = 0; i < arrayOfCategories.length; i++) {
         getAllProducts(arrayOfCategories[i])
     }
 }
-
 
 /* --- utils methods --- */
 // pipe to shortDescription
