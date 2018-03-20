@@ -5,7 +5,7 @@ const logError = Path.resolve(__dirname, 'errorLog.txt')
 const CronJob = require('cron').CronJob;
 
 /* ---- servic that run app after time defined ---- */
-new CronJob('0 */1 * * * *', function () {
+new CronJob('0 */2 * * * *', function () {
     console.log('crowler run on api to genereate sitemap.xml');
 
     // destination.txt will be created or overwritten by default.
@@ -20,15 +20,17 @@ new CronJob('0 */1 * * * *', function () {
             const request = lib.get(url, (response) => {
                 // handle http errors
                 if (response.statusCode < 200 || response.statusCode > 299) {
-                    reject(new Error('Failed to load page, status code: ' + response.statusCode));
-                    let errorLog = new Error(`
-                    Failed to load page, status code: ${response.statusCode} 
-                    Date Time Error: ${new Date().toLocaleString()}
-                    ${url}
-                    `)
-                    fs.appendFileSync(logError, errorLog, 'utf-8', (err) => {
-                        if (err) throw err;
-                    })
+                    reject(new Error('Failed to load page, status code: ' + response.statusCode))
+                    if (response.statusCode == 404) {
+                        let errorLog = new Error(`
+                        Failed to load page, status code: ${response.statusCode} 
+                        Date Time Error: ${new Date().toLocaleString()}
+                        ${url}
+                        `)
+                        fs.appendFileSync(logError, errorLog, 'utf-8', (err) => {
+                            if (err) throw err;
+                        })
+                    }
                 }
                 // temporary data holder
                 const body = [];
@@ -48,9 +50,12 @@ new CronJob('0 */1 * * * *', function () {
             // select http or https module, depending on reqested url
             const lib = url.startsWith('https') ? require('https') : require('http');
             const request = lib.get(url, (response) => {
+                // handler len of pages 
                 // handle http errors
                 if (response.statusCode < 200 || response.statusCode > 299) {
                     reject(new Error('Failed to load page, status code: ' + response.statusCode));
+                } else if (response.statusCode == 200) {
+                    url.length
                 }
                 // temporary data holder
                 const body = [];
@@ -77,6 +82,17 @@ new CronJob('0 */1 * * * *', function () {
             body += html
             body = JSON.parse(body)
             arrayCategories = []
+            var status = 0
+
+            header = `
+                    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+                            `
+            footer = `
+                    </urlset>
+                    `
+            fs.appendFileSync(path, header, 'utf-8', (err) => {
+                if (err) throw err;
+            })
             for (let i = 0; i < body.departaments.length; i++) {
                 arrayCategories.push(body.departaments[i].uniqueID)
             }
@@ -90,6 +106,7 @@ new CronJob('0 */1 * * * *', function () {
                             let body = ''
                             body += html
                             body = JSON.parse(body)
+                            status = 0
 
                             for (let i = 0; i < body.products.length; i++) {
 
@@ -135,12 +152,15 @@ new CronJob('0 */1 * * * *', function () {
                                 fs.appendFileSync(path, arrayXML, 'utf-8', (err) => {
                                     if (err) throw err;
                                 })
-
-                                const used = process.memoryUsage().heapUsed / 1024 / 1024;
-                                console.log(`Stream script uses approximately ${used.toFixed(0)} MB`)
-
                             }
-
+                            if (status == 1) {
+                                fs.appendFileSync(path, footer, 'utf-8', (err) => {
+                                    if (err) throw err;
+                                })
+                            }
+                            status++
+                            const used = process.memoryUsage().heapUsed / 1024 / 1024;
+                            console.log(`Stream script uses approximately ${used.toFixed(0)} MB`)
                         })
                         .catch((err) => console.error(err));
                 }
