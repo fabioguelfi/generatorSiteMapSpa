@@ -5,8 +5,8 @@ const logError = Path.resolve(__dirname, 'errorLog.txt');
 const CronJob = require('cron').CronJob;
 
 /* ---- servic that run app after time defined ---- */
-new CronJob('0 */5 * * * *', function () {
-    runCrowler = () => {
+new CronJob('0 */3 * * * *', function () {
+    const runCrowler = () => {
         console.log('crowler run on api to genereate sitemap.xml');
 
         // destination.txt will be created or overwritten by default.
@@ -22,7 +22,25 @@ new CronJob('0 */5 * * * *', function () {
                     const request = lib.get(url, (response) => {
                         // handle http errors
                         if (response.statusCode < 200 || response.statusCode > 299) {
-                            if (response.code == 'ENOTFOUND' && response.statusCode > 399) {
+                            if (response.code == 'ENOTFOUND' && response.statusCode > 404) {
+                                let errorLog = new Error(`
+                                Failed to load page, status code: ${response.statusCode} 
+                                Date Time Error: ${new Date().toLocaleString()}
+                                ${url}
+                                `)
+                                fs.appendFileSync(logError, errorLog, 'utf-8', (err) => {
+                                    if (err) throw err;
+                                })
+                            } else if (response.statusCode == 403) {
+                                let errorLog = new Error(`
+                                Failed to load page, status code: ${response.statusCode} 
+                                Date Time Error: ${new Date().toLocaleString()}
+                                ${url}
+                                `)
+                                fs.appendFileSync(logError, errorLog, 'utf-8', (err) => {
+                                    if (err) throw err;
+                                })
+                            } else if (response.statusCode == 500) {
                                 let errorLog = new Error(`
                                 Failed to load page, status code: ${response.statusCode} 
                                 Date Time Error: ${new Date().toLocaleString()}
@@ -83,6 +101,8 @@ new CronJob('0 */5 * * * *', function () {
                     arrayCategories = []
                     var qtdP = 50 * 2
                     var status = 0
+                    var arrayXML = new Set()
+                    var objCompare = []
 
                     var header = `
                                 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
@@ -108,61 +128,37 @@ new CronJob('0 */5 * * * *', function () {
                                     body += html
                                     body = JSON.parse(body)
                                     status = 0
+                                    var objectInit
 
                                     if (body.products) {
 
                                         for (let i = 0; i < body.products.length; i++) {
 
-                                            let priority = '0.8'
-                                            let url = `https://www.fastshop.com.br/web/p/d/14788_PRD/${pipeShortDescription(body.products[i].shortDescription)}`
-                                            let changeFreq = 'daily'
-                                            let urlImage = `https://www.fastshop.com.br${body.products[i].thumbnail}`
-                                            let titleImage = body.products[i].shortDescription
 
-                                            if (priority, url, changeFreq, urlImage, titleImage == 'undefined') {
-                                                url = 'https://www.fastshop.com.br/web/p/d/14788_PRD/'
-                                                let priority = '0.8'
-                                                let url = 'https://www.fastshop.com.br'
-                                                let changeFreq = 'daily'
-                                                let urlImage = `https://www.fastshop.com.br`
-                                                let titleImage = ''
+                                            objectInit = {
+                                                "url": `https://www.fastshop.com.br/web/p/d/14788_PRD/${pipeShortDescription(body.products[i].shortDescription)}`,
+                                                "urlImage": `https://www.fastshop.com.br${body.products[i].thumbnail}`,
+                                                "titleImage": body.products[i].shortDescription
                                             }
 
-                                            objXMl = {
-                                                unit: `   <url>
-                                                            <loc>
-                                                            ${url}
-                                                            </loc>
-                                                            <priority>${priority}</priority>
-                                                            <changefreq>${changeFreq}</changefreq>
-                                                            <image:image>
-                                                                <image:loc>
-                                                                ${urlImage}
-                                                                </image:loc>
-                                                                <image:title>
-                                                                ${titleImage}
-                                                                </image:title>
-                                                            </image:image>
-                                                       </url>
-                                                    `
+
+                                            if (objectInit.url, objectInit.urlImage, objectInit.titleImage == 'undefined') {
+                                                objectInit = {
+                                                    "url": `https://www.fastshop.com.br`,
+                                                    "urlImage": `https://www.fastshop.com.br`,
+                                                    "titleImage": ''
+                                                }
                                             }
 
-                                            var arrayXML = []
-                                            arrayXML.push(objXMl.unit)
-                                            arrayXML.reduce((x, y) => x.includes(y) ? x : [...x, y], []) // remove item duplicate
-
-                                            fs.appendFileSync(path, arrayXML, 'utf-8', (err) => {
-                                                if (err) throw err;
-                                            })
-
+                                            objCompare.push(objectInit)
                                         }
 
-                                        const used = process.memoryUsage().heapUsed / 1024 / 1024;
-                                        console.log(`Stream script uses approximately ${used.toFixed(0)} MB`)
+                                        memoryAnalize()
 
                                     } else {
                                         return
                                     }
+
                                 })
                                 .catch((err) => console.error(err));
                         }
@@ -171,33 +167,52 @@ new CronJob('0 */5 * * * *', function () {
 
                     setTimeout(() => {
 
+                        for (let i = 0; i < objCompare.length; i++) {
+
+                            objXMl = {
+                                unit: `   <url>
+                                                            <loc>
+                                                            ${objCompare[i].url}
+                                                            </loc>
+                                                            <priority>0.8</priority>
+                                                            <changefreq>daily</changefreq>
+                                                            <image:image>
+                                                                <image:loc>
+                                                                ${objCompare[i].urlImage}
+                                                                </image:loc>
+                                                                <image:title>
+                                                                ${objCompare[i].titleImage}
+                                                                </image:title>
+                                                            </image:image>
+                                                       </url>`
+                            }
+
+                            arrayXML.add(objXMl.unit)
+
+                        }
+                    }, 60000)
+
+
+                    setTimeout(() => {
+                        var setConvertedToArray = Array.from(arrayXML);
+
+                        setConvertedToArray.toString().replace(",","")
+
+                        fs.appendFileSync(path, setConvertedToArray, 'utf-8', (err) => {
+                            if (err) throw err;
+                        })
+
                         fs.appendFileSync(path, footer, 'utf-8', (err) => {
                             if (err) throw err;
                         })
 
                         console.log(`script finalizado`)
 
-                    }, 30000 * 3);
+                    }, 30000 * 4);
 
                 })
                 .catch((err) => console.error(err));
 
-            /* --- utils methods --- */
-            // pipe to shortDescription
-            pipeShortDescription = (str) => {
-                return str.toString().toLowerCase()
-                    .replace(/\s+/g, '-')
-                    .replace(/[àáâãäå]/g, 'a')
-                    .replace(/[éê]/g, 'e')
-                    .replace(/[îé]/g, 'i')
-                    .replace(/[ôóõ]/g, 'o')
-                    .replace(/[ûú]/g, 'u')
-                    .replace(/[ç]/g, 'c')
-                    .replace(/[^\w\-]+/g, '')
-                    .replace(/\-\-+/g, '-')
-                    .replace(/^-+/, '')
-                    .replace(/-+$/, '')
-            }
         }, 3000);
 
     }
@@ -205,3 +220,27 @@ new CronJob('0 */5 * * * *', function () {
 }, null, true, 'America/Sao_Paulo');
 
 
+/* --- utils methods --- */
+// pipe to shortDescription
+const pipeShortDescription = (str) => {
+    return str.toString().toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[àáâãäå]/g, 'a')
+        .replace(/[éê]/g, 'e')
+        .replace(/[îé]/g, 'i')
+        .replace(/[ôóõ]/g, 'o')
+        .replace(/[ûú]/g, 'u')
+        .replace(/[ç]/g, 'c')
+        .replace(/[^\w\-]+/g, '')
+        .replace(/\-\-+/g, '-')
+        .replace(/^-+/, '')
+        .replace(/-+$/, '')
+}
+
+// analize memory ram
+const memoryAnalize = () => {
+
+    const used = process.memoryUsage().heapUsed / 1024 / 1024;
+    console.log(`Stream script uses approximately ${used.toFixed(0)} MB`)
+
+}
